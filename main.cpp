@@ -4,10 +4,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <vector>
 #include "utils.h"
+#include "Sphere.h"
 
 #define numVAOs 1
-#define numVBOs 2
+#define numVBOs 3
 GLuint renderingProgram;
 GLuint vao[numVAOs];
 GLuint vbo[numVBOs];
@@ -22,34 +24,42 @@ glm::mat4 pMat, vMat, mMat;
 
 GLuint brickTexture;
 
-void setup_vertices(void) {
-    float pyramidPositions[54] =
-            { -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f,    //front
-              1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f,    //right
-              1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f,  //back
-              -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f,  //left
-              -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, //LF
-              1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f  //RR
-            };
+Sphere mySphere(48);
 
-    float textureCoordinates[36] =
-            { 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
-              0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
-              0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
-              0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
-              0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-              1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f
-            };
+void setup_vertices() {
+    auto ind = mySphere.getIndices();
+    auto vert = mySphere.getVertices();
+    auto text = mySphere.getTextCoords();
+    auto norm = mySphere.getNormals();
 
+    std::vector<float> flat_vert;
+    std::vector<float> flat_text;
+    std::vector<float> flat_norm;
+
+    int numIndices = mySphere.getNumIndices();
+    for (int i = 0; i < numIndices; i++) {
+        flat_vert.push_back((vert[ind[i]]).x);
+        flat_vert.push_back((vert[ind[i]]).y);
+        flat_vert.push_back((vert[ind[i]]).z);
+
+        flat_text.push_back((text[ind[i]]).s);
+        flat_text.push_back((text[ind[i]]).t);
+
+        flat_norm.push_back((norm[ind[i]]).x);
+        flat_norm.push_back((norm[ind[i]]).y);
+        flat_norm.push_back((norm[ind[i]]).z);
+    }
 
     glGenVertexArrays(1, vao);
     glBindVertexArray(vao[0]);
 
     glGenBuffers(numVBOs, vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(pyramidPositions), pyramidPositions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, flat_vert.size() * 4, &flat_vert[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoordinates), textureCoordinates, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, flat_text.size() * 4, &flat_text[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+    glBufferData(GL_ARRAY_BUFFER, flat_norm.size() * 4, &flat_norm[0], GL_STATIC_DRAW);
 }
 
 
@@ -57,7 +67,7 @@ void init(GLFWwindow* window) {
     renderingProgram = createShaderProgram();
     cameraX = 0.0f; cameraY = 0.0f; cameraZ = 8.0f;
     cubeLocX = 0.0f; cubeLocY = -2.0f; cubeLocZ = 0.0f;
-    brickTexture = loadTexture("../assets/LunaTextures+NormalMaps/ice.jpg");
+    brickTexture = loadTexture("../assets/LunaTextures+NormalMaps/brick1.jpg");
 //    glGenVertexArrays(numVAOs, vao);
 //    glBindVertexArray(vao[0]);
     setup_vertices();
@@ -103,7 +113,8 @@ void display(GLFWwindow* window, double currentTime) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 //    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 100000);
-    glDrawArrays(GL_TRIANGLES, 0, 18);
+//    glDrawArrays(GL_TRIANGLES, 0, 18);
+    glDrawArrays(GL_TRIANGLES, 0, mySphere.getNumIndices());
 
 }
 
