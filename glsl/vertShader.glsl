@@ -18,7 +18,7 @@ mat4 buildScale(float x, float y, float z);
 
 void main(void) {
     float i = gl_InstanceID + tf;
-    mat4 localRotX = buildRotateX(0);
+    mat4 localRotX = buildRotateX(i);
     mat4 localRotY = buildRotateY(i);
     mat4 localRotZ = buildRotateZ(0);
 

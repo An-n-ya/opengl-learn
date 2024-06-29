@@ -25,6 +25,7 @@ include_directories(${GLEW_INCLUDE_DIRS} ${GLFW_INCLUDE_DIRS} ${OPENGL_INCLUDE_D
 
 add_executable(opengl_learn main.cpp
         utils.h
-        Sphere.cpp)
+        Sphere.cpp
+        Torus.cpp)
 
 target_link_libraries(${PROJECT_NAME} ${GLEW_LIBRARIES} ${MY_LIB_PATH}/libsoil2-debug.so glfw OpenGL::GL)

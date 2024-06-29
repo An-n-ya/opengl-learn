@@ -7,9 +7,10 @@
 #include <vector>
 #include "utils.h"
 #include "Sphere.h"
+#include "Torus.h"
 
 #define numVAOs 1
-#define numVBOs 3
+#define numVBOs 4
 GLuint renderingProgram;
 GLuint vao[numVAOs];
 GLuint vbo[numVBOs];
@@ -25,29 +26,30 @@ glm::mat4 pMat, vMat, mMat;
 GLuint brickTexture;
 
 Sphere mySphere(48);
+Torus myTorus;
 
 void setup_vertices() {
-    auto ind = mySphere.getIndices();
-    auto vert = mySphere.getVertices();
-    auto text = mySphere.getTextCoords();
-    auto norm = mySphere.getNormals();
+    auto ind = myTorus.getIndices();
+    auto vert = myTorus.getVertices();
+    auto text = myTorus.getTextCoords();
+    auto norm = myTorus.getNormals();
 
     std::vector<float> flat_vert;
     std::vector<float> flat_text;
     std::vector<float> flat_norm;
 
-    int numIndices = mySphere.getNumIndices();
+    int numIndices = myTorus.getNumIndices();
     for (int i = 0; i < numIndices; i++) {
-        flat_vert.push_back((vert[ind[i]]).x);
-        flat_vert.push_back((vert[ind[i]]).y);
-        flat_vert.push_back((vert[ind[i]]).z);
+        flat_vert.push_back((vert[i]).x);
+        flat_vert.push_back((vert[i]).y);
+        flat_vert.push_back((vert[i]).z);
 
-        flat_text.push_back((text[ind[i]]).s);
-        flat_text.push_back((text[ind[i]]).t);
+        flat_text.push_back((text[i]).s);
+        flat_text.push_back((text[i]).t);
 
-        flat_norm.push_back((norm[ind[i]]).x);
-        flat_norm.push_back((norm[ind[i]]).y);
-        flat_norm.push_back((norm[ind[i]]).z);
+        flat_norm.push_back((norm[i]).x);
+        flat_norm.push_back((norm[i]).y);
+        flat_norm.push_back((norm[i]).z);
     }
 
     glGenVertexArrays(1, vao);
@@ -60,6 +62,8 @@ void setup_vertices() {
     glBufferData(GL_ARRAY_BUFFER, flat_text.size() * 4, &flat_text[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
     glBufferData(GL_ARRAY_BUFFER, flat_norm.size() * 4, &flat_norm[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, ind.size() * 4, &ind[0], GL_STATIC_DRAW);
 }
 
 
@@ -88,7 +92,7 @@ void display(GLFWwindow* window, double currentTime) {
     glfwGetFramebufferSize(window, &width, &height);
     aspect = (float) width / (float) height;
     // 1.0472 is 60 degree
-    pMat = glm::perspective(1.0f, aspect, 0.1f, 1000.0f);
+    pMat = glm::perspective(1.0472f, aspect, 0.1f, 1000.0f);
 
 //    if (x > 100.0) inc = -1.0f;
 //    if (x < -100.0) inc = 1.0f;
@@ -112,9 +116,12 @@ void display(GLFWwindow* window, double currentTime) {
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+    int vert_num = myTorus.getNumIndices();
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
+    glDrawElements(GL_TRIANGLES, vert_num, GL_UNSIGNED_INT, nullptr);
 //    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 100000);
 //    glDrawArrays(GL_TRIANGLES, 0, 18);
-    glDrawArrays(GL_TRIANGLES, 0, mySphere.getNumIndices());
+//    glDrawArrays(GL_TRIANGLES, 0, mySphere.getNumIndices());
 
 }
 
