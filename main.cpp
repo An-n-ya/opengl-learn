@@ -20,63 +20,36 @@ int width, height;
 float aspect;
 glm::mat4 pMat, vMat, mMat;
 
+GLuint brickTexture;
+
 void setup_vertices(void) {
-    float vertexPositions[108] = {
-            // 前面
-            -1.0f, -1.0f,  1.0f,
-            1.0f, -1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            -1.0f,  1.0f,  1.0f,
-            -1.0f, -1.0f,  1.0f,
+    float pyramidPositions[54] =
+            { -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f,    //front
+              1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f,    //right
+              1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f,  //back
+              -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f,  //left
+              -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, //LF
+              1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f  //RR
+            };
 
-            // 后面
-            -1.0f, -1.0f, -1.0f,
-            -1.0f,  1.0f, -1.0f,
-            1.0f,  1.0f, -1.0f,
-            1.0f,  1.0f, -1.0f,
-            1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f, -1.0f,
+    float textureCoordinates[36] =
+            { 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+              0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+              0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+              0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+              0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+              1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f
+            };
 
-            // 左面
-            -1.0f,  1.0f,  1.0f,
-            -1.0f,  1.0f, -1.0f,
-            -1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f,  1.0f,
-            -1.0f,  1.0f,  1.0f,
 
-            // 右面
-            1.0f,  1.0f,  1.0f,
-            1.0f, -1.0f,  1.0f,
-            1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f, -1.0f,
-            1.0f,  1.0f, -1.0f,
-            1.0f,  1.0f,  1.0f,
-
-            // 上面
-            -1.0f,  1.0f, -1.0f,
-            -1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f, -1.0f,
-            -1.0f,  1.0f, -1.0f,
-
-            // 下面
-            -1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f,  1.0f,
-            1.0f, -1.0f,  1.0f,
-            -1.0f, -1.0f,  1.0f,
-            -1.0f, -1.0f, -1.0f,
-    };
     glGenVertexArrays(1, vao);
     glBindVertexArray(vao[0]);
 
     glGenBuffers(numVBOs, vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(pyramidPositions), pyramidPositions, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoordinates), textureCoordinates, GL_STATIC_DRAW);
 }
 
 
@@ -84,6 +57,7 @@ void init(GLFWwindow* window) {
     renderingProgram = createShaderProgram();
     cameraX = 0.0f; cameraY = 0.0f; cameraZ = 8.0f;
     cubeLocX = 0.0f; cubeLocY = -2.0f; cubeLocZ = 0.0f;
+    brickTexture = loadTexture("../assets/LunaTextures+NormalMaps/ice.jpg");
 //    glGenVertexArrays(numVAOs, vao);
 //    glBindVertexArray(vao[0]);
     setup_vertices();
@@ -104,11 +78,11 @@ void display(GLFWwindow* window, double currentTime) {
     glfwGetFramebufferSize(window, &width, &height);
     aspect = (float) width / (float) height;
     // 1.0472 is 60 degree
-    pMat = glm::perspective(1.0472f, aspect, 0.1f, 1000.0f);
+    pMat = glm::perspective(1.0f, aspect, 0.1f, 1000.0f);
 
-    if (x > 100.0) inc = -1.0f;
-    if (x < -100.0) inc = 1.0f;
-    x += inc;
+//    if (x > 100.0) inc = -1.0f;
+//    if (x < -100.0) inc = 1.0f;
+//    x += inc;
 
     vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-(cameraX + x), -(cameraY + x), -cameraZ));
 
@@ -119,10 +93,17 @@ void display(GLFWwindow* window, double currentTime) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(1);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, brickTexture);
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 100000);
+//    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 100000);
+    glDrawArrays(GL_TRIANGLES, 0, 18);
 
 }
 

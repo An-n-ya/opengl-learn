@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include "SOIL2.h"
 
 #endif //OPENGL_LEARN_UTILS_H
 
@@ -85,6 +86,7 @@ GLuint createShaderProgram() {
     glGetShaderiv(fshader, GL_COMPILE_STATUS, &fragCompiled);
     if (fragCompiled != 1) {
         std::cout << "fragment compilation failed" << std::endl;
+
         printShaderLog(fshader);
     }
 
@@ -102,4 +104,11 @@ GLuint createShaderProgram() {
     return vfProgram;
 }
 
+GLuint loadTexture(const char *textImagePath) {
+    GLuint textureID;
+    textureID = SOIL_load_OGL_texture(textImagePath,
+                                      SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    if (textureID == 0) std::cout << "could not find texture file " << textImagePath << std::endl;
+    return textureID;
+}
 

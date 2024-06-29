@@ -18,9 +18,12 @@ if (OpenGL_FOUND)
     message(STATUS "Found OpenGL: ${OPENGL_INCLUDE_DIR}")
 endif()
 
-include_directories(${GLEW_INCLUDE_DIRS} ${GLFW_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIR})
+
+set(MY_LIB_PATH "${CMAKE_SOURCE_DIR}/lib")
+
+include_directories(${GLEW_INCLUDE_DIRS} ${GLFW_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIR} ${MY_LIB_PATH}/include)
 
 add_executable(opengl_learn main.cpp
         utils.h)
 
-target_link_libraries(${PROJECT_NAME} ${GLEW_LIBRARIES} glfw OpenGL::GL)
+target_link_libraries(${PROJECT_NAME} ${GLEW_LIBRARIES} ${MY_LIB_PATH}/libsoil2-debug.so glfw OpenGL::GL)
