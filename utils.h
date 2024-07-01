@@ -64,6 +64,8 @@ GLuint createShaderProgram() {
     GLint linked;
     std::string vertShaderStr = readShaderSource("../glsl/gouraud/vertShader.glsl");
     std::string fragShaderStr = readShaderSource("../glsl/gouraud/fragShader.glsl");
+//    std::string vertShaderStr = readShaderSource("../glsl/phong/vertShader.glsl");
+//    std::string fragShaderStr = readShaderSource("../glsl/phong/fragShader.glsl");
 
     const char *vshaderSource = vertShaderStr.c_str();
     const char *fshaderSource = fragShaderStr.c_str();
@@ -113,6 +115,12 @@ GLuint loadTexture(const char *textImagePath) {
 }
 
 namespace Material {
+    // GOLD material - ambient, diffuse, specular, and shininess
+    float* normalAmbient() { static float a[4] = { 1.0f, 1.0f, 1.0f, 1 }; return (float*)a; }
+    float* normalDiffuse() { static float a[4] = { 1.0f, 1.0f, 1.0f, 1 }; return (float*)a; }
+    float* normalSpecular() { static float a[4] = { 1.0f, 1.0f, 1.0f, 1 }; return (float*)a; }
+    float normalShininess() { return 11.2f; }
+
     // GOLD material - ambient, diffuse, specular, and shininess
     float* goldAmbient() { static float a[4] = { 0.2473f, 0.1995f, 0.0745f, 1 }; return (float*)a; }
     float* goldDiffuse() { static float a[4] = { 0.7516f, 0.6065f, 0.2265f, 1 }; return (float*)a; }

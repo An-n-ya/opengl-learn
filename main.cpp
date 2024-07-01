@@ -34,7 +34,7 @@ GLuint brickTexture;
 
 Sphere mySphere(48);
 Torus myTorus;
-Model myModel("../assets/NasaShuttle/shuttle.obj");
+Model myModel("../assets/Studio522Dolphin/dolphinHighPoly.obj");
 
 // white light
 float globalAmbient[4] = { 0.7f, 0.7f, 0.7f, 1.0f };
@@ -43,10 +43,10 @@ float lightDiffuse[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 float lightSpecular[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 // gold material
-float* matAmb = Material::goldAmbient();
-float* matDif = Material::goldDiffuse();
-float* matSpe = Material::goldSpecular();
-float matShi = Material::goldShininess();
+float* matAmb = Material::normalAmbient();
+float* matDif = Material::normalDiffuse();
+float* matSpe = Material::normalSpecular();
+float matShi = Material::normalShininess();
 
 void installLights(glm::mat4 vMatrix) {
     lightPosV = glm::vec3(vMatrix * glm::vec4(currentLightPos, 1.0));
@@ -121,7 +121,7 @@ void init(GLFWwindow* window) {
     renderingProgram = createShaderProgram();
     cameraX = 0.0f; cameraY = 0.0f; cameraZ = 8.0f;
     cubeLocX = 0.0f; cubeLocY = -2.0f; cubeLocZ = 0.0f;
-//    brickTexture = loadTexture("../assets/NasaShuttle/spstob_1.jpg");
+    brickTexture = loadTexture("../assets/Studio522Dolphin/Dolphin_HighPolyUV.png");
 //    glGenVertexArrays(numVAOs, vao);
 //    glBindVertexArray(vao[0]);
     setup_vertices();
@@ -145,14 +145,14 @@ void display(GLFWwindow* window, double currentTime) {
     // 1.0472 is 60 degree
     pMat = glm::perspective(0.5f, aspect, 0.1f, 1000.0f);
 
-//    if (x > 100.0) inc = -1.0f;
-//    if (x < -100.0) inc = 1.0f;
-//    x += inc;
+    if (x > 100.0) inc = -1.0f;
+    if (x < -100.0) inc = 1.0f;
+    x += inc;
 
     mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f));
-    mMat *= glm::rotate(mMat, 20.0f / 360.0f * 2.0f * 3.1415f, glm::vec3(1.0f, 0.0f, 0.0f));
-    mMat *= glm::rotate(mMat, 20.0f / 360.0f * 2.0f * 3.1415f, glm::vec3(0.0f, 1.0f, 0.0f));
-    vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-(cameraX + x), -(cameraY + x), -cameraZ));
+    mMat *= glm::rotate(mMat, 00.0f / 360.0f * 2.0f * 3.1415f, glm::vec3(1.0f, 0.0f, 0.0f));
+    mMat *= glm::rotate(mMat, x / 360.0f * 2.0f * 3.1415f, glm::vec3(0.0f, 1.0f, 0.0f));
+    vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-(cameraX), -(cameraY), -cameraZ));
 
     mvMat = vMat * mMat;
     invTrMat = glm::transpose(glm::inverse(mvMat));
