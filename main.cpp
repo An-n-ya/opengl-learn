@@ -19,16 +19,65 @@ GLuint vbo[numVBOs];
 float cameraX, cameraY, cameraZ;
 float cubeLocX, cubeLocY, cubeLocZ;
 
-GLint vLoc, projLoc, tfLoc;
+GLint vLoc, projLoc, tfLoc, nLoc;
 int width, height;
 float aspect;
-glm::mat4 pMat, vMat, mMat;
+glm::mat4 pMat, vMat, mMat, mvMat, invTrMat;
+
+GLint globalAmbLoc, ambLoc, diffLoc, specLoc, posLoc, mAmbLoc, mDiffLoc, mSpecLoc, mShiLoc;
+glm::vec3 currentLightPos, lightPosV;
+float lightPos[3];
+
+glm::vec3 initialLightLoc = glm::vec3(5.0f, 2.0f, 2.0f);
 
 GLuint brickTexture;
 
 Sphere mySphere(48);
 Torus myTorus;
 Model myModel("../assets/NasaShuttle/shuttle.obj");
+
+// white light
+float globalAmbient[4] = { 0.7f, 0.7f, 0.7f, 1.0f };
+float lightAmbient[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+float lightDiffuse[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+float lightSpecular[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+// gold material
+float* matAmb = Material::goldAmbient();
+float* matDif = Material::goldDiffuse();
+float* matSpe = Material::goldSpecular();
+float matShi = Material::goldShininess();
+
+void installLights(glm::mat4 vMatrix) {
+    lightPosV = glm::vec3(vMatrix * glm::vec4(currentLightPos, 1.0));
+    lightPos[0] = lightPosV.x;
+    lightPos[1] = lightPosV.y;
+    lightPos[2] = lightPosV.z;
+
+    globalAmbLoc = glGetUniformLocation(renderingProgram, "globalAmbient");
+    ambLoc = glGetUniformLocation(renderingProgram, "light.ambient");
+    diffLoc = glGetUniformLocation(renderingProgram, "light.diffuse");
+    specLoc = glGetUniformLocation(renderingProgram, "light.specular");
+    posLoc = glGetUniformLocation(renderingProgram, "light.position");
+
+    mAmbLoc = glGetUniformLocation(renderingProgram, "material.ambient");
+    mDiffLoc = glGetUniformLocation(renderingProgram, "material.diffuse");
+    mSpecLoc = glGetUniformLocation(renderingProgram, "material.specular");
+    mShiLoc = glGetUniformLocation(renderingProgram, "material.shininess");
+
+    glProgramUniform4fv(renderingProgram, globalAmbLoc, 1, globalAmbient);
+    glProgramUniform4fv(renderingProgram, ambLoc, 1, lightAmbient);
+    glProgramUniform4fv(renderingProgram, diffLoc, 1, lightDiffuse);
+    glProgramUniform4fv(renderingProgram, specLoc, 1, lightSpecular);
+    glProgramUniform3fv(renderingProgram, posLoc, 1, lightPos);
+
+    glProgramUniform4fv(renderingProgram, mAmbLoc, 1, matAmb);
+    glProgramUniform4fv(renderingProgram, mDiffLoc, 1, matDif);
+    glProgramUniform4fv(renderingProgram, mSpecLoc, 1, matSpe);
+    glProgramUniform1f(renderingProgram, mShiLoc, matShi);
+    checkOpenGLError();
+}
+
 
 void setup_vertices() {
     auto vert = myModel.getVertices();
@@ -72,7 +121,7 @@ void init(GLFWwindow* window) {
     renderingProgram = createShaderProgram();
     cameraX = 0.0f; cameraY = 0.0f; cameraZ = 8.0f;
     cubeLocX = 0.0f; cubeLocY = -2.0f; cubeLocZ = 0.0f;
-    brickTexture = loadTexture("../assets/NasaShuttle/spstob_1.jpg");
+//    brickTexture = loadTexture("../assets/NasaShuttle/spstob_1.jpg");
 //    glGenVertexArrays(numVAOs, vao);
 //    glBindVertexArray(vao[0]);
     setup_vertices();
@@ -86,8 +135,9 @@ void display(GLFWwindow* window, double currentTime) {
     glClearColor(0.2, 0.5,0.3, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    vLoc = glGetUniformLocation(renderingProgram, "v_matrix");
+    vLoc = glGetUniformLocation(renderingProgram, "mv_matrix");
     projLoc = glGetUniformLocation(renderingProgram, "proj_matrix");
+    nLoc = glGetUniformLocation(renderingProgram, "norm_matrix");
     tfLoc = glGetUniformLocation(renderingProgram, "tf");
 
     glfwGetFramebufferSize(window, &width, &height);
@@ -99,10 +149,22 @@ void display(GLFWwindow* window, double currentTime) {
 //    if (x < -100.0) inc = 1.0f;
 //    x += inc;
 
+    mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f));
+    mMat *= glm::rotate(mMat, 20.0f / 360.0f * 2.0f * 3.1415f, glm::vec3(1.0f, 0.0f, 0.0f));
+    mMat *= glm::rotate(mMat, 20.0f / 360.0f * 2.0f * 3.1415f, glm::vec3(0.0f, 1.0f, 0.0f));
     vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-(cameraX + x), -(cameraY + x), -cameraZ));
 
-    glUniformMatrix4fv(vLoc, 1, GL_FALSE, glm::value_ptr(vMat));
+    mvMat = vMat * mMat;
+    invTrMat = glm::transpose(glm::inverse(mvMat));
+
+
+    currentLightPos = glm::vec3(initialLightLoc.x, initialLightLoc.y, initialLightLoc.z);
+    installLights(vMat);
+
+
+    glUniformMatrix4fv(vLoc, 1, GL_FALSE, glm::value_ptr(mvMat));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(pMat));
+    glUniformMatrix4fv(nLoc, 1, GL_FALSE, glm::value_ptr(invTrMat));
     glUniform1f(tfLoc, (float)currentTime);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -111,6 +173,9 @@ void display(GLFWwindow* window, double currentTime) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(2);
 
 //    glActiveTexture(GL_TEXTURE0);
 //    glBindTexture(GL_TEXTURE_2D, brickTexture);
@@ -125,6 +190,7 @@ void display(GLFWwindow* window, double currentTime) {
     glDrawArrays(GL_TRIANGLES, 0, myModel.getNumVertices());
 
 }
+
 
 int main() {
     if (!glfwInit()) {
