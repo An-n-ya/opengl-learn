@@ -8,6 +8,7 @@
 #include "utils.h"
 #include "Sphere.h"
 #include "Torus.h"
+#include "ObjImporter.h"
 
 #define numVAOs 1
 #define numVBOs 4
@@ -27,18 +28,18 @@ GLuint brickTexture;
 
 Sphere mySphere(48);
 Torus myTorus;
+Model myModel("../assets/NasaShuttle/shuttle.obj");
 
 void setup_vertices() {
-    auto ind = myTorus.getIndices();
-    auto vert = myTorus.getVertices();
-    auto text = myTorus.getTextCoords();
-    auto norm = myTorus.getNormals();
+    auto vert = myModel.getVertices();
+    auto text = myModel.getTextCoords();
+    auto norm = myModel.getNormals();
 
     std::vector<float> flat_vert;
     std::vector<float> flat_text;
     std::vector<float> flat_norm;
 
-    int numIndices = myTorus.getNumIndices();
+    int numIndices = myModel.getNumVertices();
     for (int i = 0; i < numIndices; i++) {
         flat_vert.push_back((vert[i]).x);
         flat_vert.push_back((vert[i]).y);
@@ -62,8 +63,8 @@ void setup_vertices() {
     glBufferData(GL_ARRAY_BUFFER, flat_text.size() * 4, &flat_text[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
     glBufferData(GL_ARRAY_BUFFER, flat_norm.size() * 4, &flat_norm[0], GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, ind.size() * 4, &ind[0], GL_STATIC_DRAW);
+//    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
+//    glBufferData(GL_ELEMENT_ARRAY_BUFFER, ind.size() * 4, &ind[0], GL_STATIC_DRAW);
 }
 
 
@@ -71,7 +72,7 @@ void init(GLFWwindow* window) {
     renderingProgram = createShaderProgram();
     cameraX = 0.0f; cameraY = 0.0f; cameraZ = 8.0f;
     cubeLocX = 0.0f; cubeLocY = -2.0f; cubeLocZ = 0.0f;
-    brickTexture = loadTexture("../assets/LunaTextures+NormalMaps/brick1.jpg");
+    brickTexture = loadTexture("../assets/NasaShuttle/spstob_1.jpg");
 //    glGenVertexArrays(numVAOs, vao);
 //    glBindVertexArray(vao[0]);
     setup_vertices();
@@ -92,7 +93,7 @@ void display(GLFWwindow* window, double currentTime) {
     glfwGetFramebufferSize(window, &width, &height);
     aspect = (float) width / (float) height;
     // 1.0472 is 60 degree
-    pMat = glm::perspective(1.0472f, aspect, 0.1f, 1000.0f);
+    pMat = glm::perspective(0.5f, aspect, 0.1f, 1000.0f);
 
 //    if (x > 100.0) inc = -1.0f;
 //    if (x < -100.0) inc = 1.0f;
@@ -111,17 +112,17 @@ void display(GLFWwindow* window, double currentTime) {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(1);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, brickTexture);
+//    glActiveTexture(GL_TEXTURE0);
+//    glBindTexture(GL_TEXTURE_2D, brickTexture);
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    int vert_num = myTorus.getNumIndices();
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
-    glDrawElements(GL_TRIANGLES, vert_num, GL_UNSIGNED_INT, nullptr);
+//    int vert_num = myTorus.getNumIndices();
+//    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
+//    glDrawElements(GL_TRIANGLES, vert_num, GL_UNSIGNED_INT, nullptr);
 //    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 100000);
 //    glDrawArrays(GL_TRIANGLES, 0, 18);
-//    glDrawArrays(GL_TRIANGLES, 0, mySphere.getNumIndices());
+    glDrawArrays(GL_TRIANGLES, 0, myModel.getNumVertices());
 
 }
 

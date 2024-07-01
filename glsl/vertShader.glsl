@@ -18,11 +18,11 @@ mat4 buildScale(float x, float y, float z);
 
 void main(void) {
     float i = gl_InstanceID + tf;
-    mat4 localRotX = buildRotateX(i);
+    mat4 localRotX = buildRotateX(0);
     mat4 localRotY = buildRotateY(i);
     mat4 localRotZ = buildRotateZ(0);
 
-    mat4 s_matrix = buildScale(1.5, 1.5, 1.5);
+    mat4 s_matrix = buildScale(3, 3, 3);
 
     mat4 newM_matrix = localRotX * localRotY * localRotZ;
     mat4 mv_matrix = v_matrix * newM_matrix;
