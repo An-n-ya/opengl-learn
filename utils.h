@@ -58,14 +58,16 @@ std::string readShaderSource(const char *filepath) {
     return content;
 }
 
-GLuint createShaderProgram() {
+GLuint createShaderProgram(const char* vertFilePath, const char* fragFilePath) {
     GLint vertCompiled;
     GLint fragCompiled;
     GLint linked;
-//    std::string vertShaderStr = readShaderSource("../glsl/gouraud/vertShader.glsl");
+//    std::string vertShaderStr = readShaderSource("../glsl/gouraud/vertShaderglsl");
 //    std::string fragShaderStr = readShaderSource("../glsl/gouraud/fragShader.glsl");
-    std::string vertShaderStr = readShaderSource("../glsl/phong/vertShader.glsl");
-    std::string fragShaderStr = readShaderSource("../glsl/phong/fragShader.glsl");
+//    std::string vertShaderStr = readShaderSource("../glsl/phong/vertShader1.glsl");
+//    std::string fragShaderStr = readShaderSource("../glsl/phong/fragShader1.glsl");
+    std::string vertShaderStr = readShaderSource(vertFilePath);
+    std::string fragShaderStr = readShaderSource(fragFilePath);
 
     const char *vshaderSource = vertShaderStr.c_str();
     const char *fshaderSource = fragShaderStr.c_str();

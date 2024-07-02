@@ -12,14 +12,14 @@
 
 #define numVAOs 1
 #define numVBOs 7
-GLuint renderingProgram;
+GLuint renderingProgram1, renderingProgram2;
 GLuint vao[numVAOs];
 GLuint vbo[numVBOs];
 
 float cameraX, cameraY, cameraZ;
 float cubeLocX, cubeLocY, cubeLocZ;
 
-GLint vLoc, projLoc, tfLoc, nLoc;
+GLint vLoc, projLoc, tfLoc, nLoc, sLoc;
 int width, height;
 float aspect;
 glm::mat4 pMat, vMat, mMat, mvMat, invTrMat;
@@ -48,40 +48,72 @@ float lightAmbient[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 float lightDiffuse[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 float lightSpecular[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-// gold material
+// material
 float* matAmb = Material::normalAmbient();
 float* matDif = Material::normalDiffuse();
 float* matSpe = Material::normalSpecular();
 float matShi = Material::normalShininess();
 
+// shadow
+int screenSizeX, screenSizeY;
+GLuint  shadowTex, shadowBuffer;
+glm::mat4 lightVMatrix, lightPMatrix;
+glm::mat4 shadowMVP1, shadowMVP2;
+glm::mat4 b = glm::mat4(
+    0.5f, 0.0f, 0.0f, 0.0f,
+    0.0f, 0.5f, 0.0f, 0.0f,
+    0.0f, 0.0f, 0.5f, 0.0f,
+    0.5f, 0.5f, 0.5f, 1.0f
+);
 
-void installLights(glm::mat4 vMatrix) {
+void setupShadowBuffers(GLFWwindow *window) {
+    glfwGetFramebufferSize(window, &width, &height) ;
+    screenSizeX = width;
+    screenSizeY = height;
+
+    glGenFramebuffers(1, &shadowBuffer);
+
+    glGenTextures(1,  &shadowTex);
+    glBindTexture(GL_TEXTURE_2D, shadowTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, screenSizeX, screenSizeY, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
+                 nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
+
+void installLights(GLuint program, glm::mat4 vMatrix) {
     lightPosV = glm::vec3(vMatrix * glm::vec4(currentLightPos, 1.0));
     lightPos[0] = lightPosV.x;
     lightPos[1] = lightPosV.y;
     lightPos[2] = lightPosV.z;
 
-    globalAmbLoc = glGetUniformLocation(renderingProgram, "globalAmbient");
-    ambLoc = glGetUniformLocation(renderingProgram, "light.ambient");
-    diffLoc = glGetUniformLocation(renderingProgram, "light.diffuse");
-    specLoc = glGetUniformLocation(renderingProgram, "light.specular");
-    posLoc = glGetUniformLocation(renderingProgram, "light.position");
+    globalAmbLoc = glGetUniformLocation(program, "globalAmbient");
+    ambLoc = glGetUniformLocation(program, "light.ambient");
+    diffLoc = glGetUniformLocation(program, "light.diffuse");
+    specLoc = glGetUniformLocation(program, "light.specular");
+    posLoc = glGetUniformLocation(program, "light.position");
 
-    mAmbLoc = glGetUniformLocation(renderingProgram, "material.ambient");
-    mDiffLoc = glGetUniformLocation(renderingProgram, "material.diffuse");
-    mSpecLoc = glGetUniformLocation(renderingProgram, "material.specular");
-    mShiLoc = glGetUniformLocation(renderingProgram, "material.shininess");
+    mAmbLoc = glGetUniformLocation(program, "material.ambient");
+    mDiffLoc = glGetUniformLocation(program, "material.diffuse");
+    mSpecLoc = glGetUniformLocation(program, "material.specular");
+    mShiLoc = glGetUniformLocation(program, "material.shininess");
 
-    glProgramUniform4fv(renderingProgram, globalAmbLoc, 1, globalAmbient);
-    glProgramUniform4fv(renderingProgram, ambLoc, 1, lightAmbient);
-    glProgramUniform4fv(renderingProgram, diffLoc, 1, lightDiffuse);
-    glProgramUniform4fv(renderingProgram, specLoc, 1, lightSpecular);
-    glProgramUniform3fv(renderingProgram, posLoc, 1, lightPos);
+    glProgramUniform4fv(program, globalAmbLoc, 1, globalAmbient);
+    glProgramUniform4fv(program, ambLoc, 1, lightAmbient);
+    glProgramUniform4fv(program, diffLoc, 1, lightDiffuse);
+    glProgramUniform4fv(program, specLoc, 1, lightSpecular);
+    glProgramUniform3fv(program, posLoc, 1, lightPos);
 
-    glProgramUniform4fv(renderingProgram, mAmbLoc, 1, matAmb);
-    glProgramUniform4fv(renderingProgram, mDiffLoc, 1, matDif);
-    glProgramUniform4fv(renderingProgram, mSpecLoc, 1, matSpe);
-    glProgramUniform1f(renderingProgram, mShiLoc, matShi);
+    glProgramUniform4fv(program, mAmbLoc, 1, matAmb);
+    glProgramUniform4fv(program, mDiffLoc, 1, matDif);
+    glProgramUniform4fv(program, mSpecLoc, 1, matSpe);
+    glProgramUniform1f(program, mShiLoc, matShi);
     checkOpenGLError();
 }
 
@@ -154,54 +186,80 @@ void setup_vertices() {
 
 
 void init(GLFWwindow* window) {
-    renderingProgram = createShaderProgram();
+    renderingProgram1 = createShaderProgram("../glsl/phong/vertShader1.glsl", "../glsl/phong/fragShader1.glsl");
+    renderingProgram2 = createShaderProgram("../glsl/phong/vertShader2.glsl", "../glsl/phong/fragShader2.glsl");
     cameraX = 0.0f; cameraY = 0.0f; cameraZ = 8.0f;
     cubeLocX = 0.0f; cubeLocY = -2.0f; cubeLocZ = 0.0f;
     brickTexture = loadTexture("../assets/Studio522Dolphin/Dolphin_HighPolyUV.png");
-//    glGenVertexArrays(numVAOs, vao);
-//    glBindVertexArray(vao[0]);
     setup_vertices();
+    setupShadowBuffers(window);
 }
 
-float x = 0;
-float inc = 1.0f;
-void display(GLFWwindow* window, double currentTime) {
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glUseProgram(renderingProgram);
-    glClearColor(0.2, 0.5,0.3, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT);
+void passOne() {
+    glUseProgram(renderingProgram1);
+    sLoc = glGetUniformLocation(renderingProgram1, "shadowMVP");
 
-    vLoc = glGetUniformLocation(renderingProgram, "mv_matrix");
-    projLoc = glGetUniformLocation(renderingProgram, "proj_matrix");
-    nLoc = glGetUniformLocation(renderingProgram, "norm_matrix");
-    tfLoc = glGetUniformLocation(renderingProgram, "tf");
+    mMat = glm::translate(glm::mat4(1.0f), pyrLoc);
+    mMat = glm::rotate(mMat, toRadians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    mMat = glm::rotate(mMat, toRadians(20.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-    glfwGetFramebufferSize(window, &width, &height);
-    aspect = (float) width / (float) height;
-    // 1.0472 is 60 degree
+    shadowMVP1 = lightPMatrix * lightVMatrix * mMat;
+    glUniformMatrix4fv(sLoc, 1, GL_FALSE, glm::value_ptr(shadowMVP1));
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(0);
+
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+    glFrontFace(GL_CCW);
+    glDepthFunc(GL_LEQUAL);
+    glDrawArrays(GL_TRIANGLES, 0, myModel.getNumVertices());
+
+    mMat = glm::translate(glm::mat4(1.0f), torusLoc);
+    mMat = glm::rotate(mMat, toRadians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    mMat = glm::rotate(mMat, toRadians(0), glm::vec3(0.0f, 1.0f, 0.0f));
+
+    shadowMVP1 = lightPMatrix * lightVMatrix * mMat;
+    glUniformMatrix4fv(sLoc, 1, GL_FALSE, glm::value_ptr(shadowMVP1));
+
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[6]);
+    glEnable(GL_CULL_FACE);
+    glFrontFace(GL_CCW);
+    glDepthFunc(GL_LEQUAL);
+    glEnable(GL_DEPTH_TEST);
+    glDrawElements(GL_TRIANGLES, myTorus.getNumIndices(), GL_UNSIGNED_INT, nullptr);
+}
+
+void passTwo() {
+    glUseProgram(renderingProgram2);
+    vLoc = glGetUniformLocation(renderingProgram2, "mv_matrix");
+    projLoc = glGetUniformLocation(renderingProgram2, "proj_matrix");
+    nLoc = glGetUniformLocation(renderingProgram2, "norm_matrix");
+    sLoc = glGetUniformLocation(renderingProgram2, "shadowMVP");
     pMat = glm::perspective(0.5f, aspect, 0.1f, 1000.0f);
-
-    if (x > 100.0) inc = -1.0f;
-    if (x < -100.0) inc = 1.0f;
-    x += inc;
 
     mMat = glm::translate(glm::mat4(1.0f), pyrLoc);
     mMat = glm::rotate(mMat, toRadians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     mMat = glm::rotate(mMat, toRadians(20.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-cameraX, -cameraY, -cameraZ));
-
     mvMat = vMat * mMat;
     invTrMat = glm::transpose(glm::inverse(mvMat));
 
+    shadowMVP2 = b * lightPMatrix * lightVMatrix * mMat;
 
-    currentLightPos = glm::vec3(initialLightLoc.x, initialLightLoc.y, initialLightLoc.z);
-    installLights(vMat);
+    currentLightPos = glm::vec3(initialLightLoc);
+    installLights(renderingProgram2,vMat);
 
 
     glUniformMatrix4fv(vLoc, 1, GL_FALSE, glm::value_ptr(mvMat));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(pMat));
     glUniformMatrix4fv(nLoc, 1, GL_FALSE, glm::value_ptr(invTrMat));
-    glUniform1f(tfLoc, (float)currentTime);
+    glUniformMatrix4fv(sLoc, 1, GL_FALSE, glm::value_ptr(shadowMVP2));
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
@@ -214,31 +272,30 @@ void display(GLFWwindow* window, double currentTime) {
     glEnableVertexAttribArray(2);
 
     glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
     glFrontFace(GL_CCW);
     glDepthFunc(GL_LEQUAL);
     glDrawArrays(GL_TRIANGLES, 0, myModel.getNumVertices());
 
-//    glActiveTexture(GL_TEXTURE0);
-//    glBindTexture(GL_TEXTURE_2D, brickTexture);
+    ////////////////////////////////////////// torus /////////////////////
 
     mMat = glm::translate(glm::mat4(1.0f), torusLoc);
     mMat = glm::rotate(mMat, toRadians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    mMat = glm::rotate(mMat, toRadians(0), glm::vec3(0.0f, 1.0f, 0.0f));
+    mMat = glm::rotate(mMat, toRadians(20.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-cameraX, -cameraY, -cameraZ));
+
+    currentLightPos = glm::vec3(initialLightLoc);
+    installLights(renderingProgram2,vMat);
 
     mvMat = vMat * mMat;
     invTrMat = glm::transpose(glm::inverse(mvMat));
-
-
-    currentLightPos = glm::vec3(initialLightLoc.x, initialLightLoc.y, initialLightLoc.z);
-    installLights(vMat);
+    shadowMVP2 = b * lightPMatrix * lightVMatrix * mMat;
 
 
     glUniformMatrix4fv(vLoc, 1, GL_FALSE, glm::value_ptr(mvMat));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(pMat));
     glUniformMatrix4fv(nLoc, 1, GL_FALSE, glm::value_ptr(invTrMat));
-    glUniform1f(tfLoc, (float)currentTime);
-
-
+    glUniformMatrix4fv(sLoc, 1, GL_FALSE, glm::value_ptr(shadowMVP2));
     glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
@@ -248,12 +305,47 @@ void display(GLFWwindow* window, double currentTime) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo[5]);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[6]);
     glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
     glFrontFace(GL_CCW);
     glDepthFunc(GL_LEQUAL);
-    glEnable(GL_DEPTH_TEST);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[6]);
     glDrawElements(GL_TRIANGLES, myTorus.getNumIndices(), GL_UNSIGNED_INT, nullptr);
+}
+
+void display(GLFWwindow* window, double currentTime) {
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.2, 0.5,0.3, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    aspect = (float) width / (float) height;
+
+    currentLightPos = glm::vec3(initialLightLoc);
+
+    lightVMatrix = glm::lookAt(currentLightPos, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
+    lightPMatrix = glm::perspective(toRadians(60.0f), aspect, 0.1f, 1000.0f);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowTex, 0);
+    glDrawBuffer(GL_NONE);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(2.0f, 4.0f);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    passOne();
+
+    glDisable(GL_POLYGON_OFFSET_FILL);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, shadowTex);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // this line will cause blinking, don't know why
+//    glDrawBuffer(GL_FRONT);
+
+    passTwo();
 }
 
 

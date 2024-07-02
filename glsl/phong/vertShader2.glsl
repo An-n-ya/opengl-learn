@@ -3,7 +3,7 @@
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec2 textCord;
 layout (location = 2) in vec3 normal;
-layout (binding = 0) uniform sampler2D samp;
+layout (binding = 0) uniform sampler2DShadow shTex;
 
 struct PositionalLight {
     vec4 ambient;
@@ -25,13 +25,14 @@ uniform Material material;
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
-uniform float tf;
+uniform mat4 shadowMVP;
 
 
 out vec3 varyingNormal;
 out vec3 varyingLightDir;
 out vec3 varyingVertPos;
 out vec2 tc;
+out vec4 shadow_coord;
 
 mat4 buildRotateX(float rad);
 mat4 buildRotateY(float rad);
@@ -43,6 +44,7 @@ void main(void) {
     varyingVertPos = (mv_matrix * vec4(position, 1.0)).xyz;
     varyingLightDir = light.position - varyingVertPos;
     varyingNormal = (norm_matrix * vec4(normal, 1.0)).xyz;
+    shadow_coord = shadowMVP * vec4(position, 1.0);
 
 
     tc = textCord;
