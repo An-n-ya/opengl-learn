@@ -41,6 +41,6 @@ void main(void) {
     vec4 specularLight = vec4(light.specular.xyz * material.specular.xyz * pow(max(dot(R, V), 0.0),
         material.shininess), 1.0);
 
-    vec4 textureColor = texture(samp, tc);
-    color = textureColor * (ambientLight + diffuseLight) + specularLight;
+//    vec4 textureColor = texture(samp, tc);
+    color =  (ambientLight + diffuseLight) + specularLight;
 }

@@ -11,7 +11,7 @@
 #include "ObjImporter.h"
 
 #define numVAOs 1
-#define numVBOs 4
+#define numVBOs 7
 GLuint renderingProgram;
 GLuint vao[numVAOs];
 GLuint vbo[numVBOs];
@@ -28,13 +28,19 @@ GLint globalAmbLoc, ambLoc, diffLoc, specLoc, posLoc, mAmbLoc, mDiffLoc, mSpecLo
 glm::vec3 currentLightPos, lightPosV;
 float lightPos[3];
 
-glm::vec3 initialLightLoc = glm::vec3(5.0f, 2.0f, 2.0f);
+glm::vec3 initialLightLoc = glm::vec3(3.8f, 2.2f, 1.1f);
+
+float toRadians(float degrees) { return (degrees * 2.0f * 3.14159f) / 360.0f; }
 
 GLuint brickTexture;
 
 Sphere mySphere(48);
 Torus myTorus;
-Model myModel("../assets/Studio522Dolphin/dolphinHighPoly.obj");
+//Model myModel("../assets/Studio522Dolphin/dolphinHighPoly.obj");
+Model myModel("../assets/otherModels/pyr.obj");
+
+glm::vec3 torusLoc = glm::vec3(-1.6f, 0.0f, -0.3f);
+glm::vec3 pyrLoc = glm::vec3(1.0f, 0.1f, 0.3f);
 
 // white light
 float globalAmbient[4] = { 0.7f, 0.7f, 0.7f, 1.0f };
@@ -47,6 +53,7 @@ float* matAmb = Material::normalAmbient();
 float* matDif = Material::normalDiffuse();
 float* matSpe = Material::normalSpecular();
 float matShi = Material::normalShininess();
+
 
 void installLights(glm::mat4 vMatrix) {
     lightPosV = glm::vec3(vMatrix * glm::vec4(currentLightPos, 1.0));
@@ -102,18 +109,47 @@ void setup_vertices() {
         flat_norm.push_back((norm[i]).z);
     }
 
+    auto t_vert = myTorus.getVertices();
+    auto t_text = myTorus.getTextCoords();
+    auto t_norm = myTorus.getNormals();
+    auto t_ind = myTorus.getIndices();
+
+    std::vector<float> t_flat_vert;
+    std::vector<float> t_flat_text;
+    std::vector<float> t_flat_norm;
+
+    int t_numIndices = myTorus.getNumIndices();
+    for (int i = 0; i < t_numIndices; i++) {
+        t_flat_vert.push_back((t_vert[i]).x);
+        t_flat_vert.push_back((t_vert[i]).y);
+        t_flat_vert.push_back((t_vert[i]).z);
+
+        t_flat_text.push_back((t_text[i]).s);
+        t_flat_text.push_back((t_text[i]).t);
+
+        t_flat_norm.push_back((t_norm[i]).x);
+        t_flat_norm.push_back((t_norm[i]).y);
+        t_flat_norm.push_back((t_norm[i]).z);
+    }
+
     glGenVertexArrays(1, vao);
     glBindVertexArray(vao[0]);
-
     glGenBuffers(numVBOs, vbo);
+
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
     glBufferData(GL_ARRAY_BUFFER, flat_vert.size() * 4, &flat_vert[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
     glBufferData(GL_ARRAY_BUFFER, flat_text.size() * 4, &flat_text[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
     glBufferData(GL_ARRAY_BUFFER, flat_norm.size() * 4, &flat_norm[0], GL_STATIC_DRAW);
-//    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
-//    glBufferData(GL_ELEMENT_ARRAY_BUFFER, ind.size() * 4, &ind[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+    glBufferData(GL_ARRAY_BUFFER, t_flat_vert.size() * 4, &t_flat_vert[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
+    glBufferData(GL_ARRAY_BUFFER, t_flat_text.size() * 4, &t_flat_text[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[5]);
+    glBufferData(GL_ARRAY_BUFFER, t_flat_norm.size() * 4, &t_flat_norm[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[6]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, t_ind.size() * 4, &t_ind[0], GL_STATIC_DRAW);
 }
 
 
@@ -149,10 +185,10 @@ void display(GLFWwindow* window, double currentTime) {
     if (x < -100.0) inc = 1.0f;
     x += inc;
 
-    mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f));
-    mMat *= glm::rotate(mMat, 00.0f / 360.0f * 2.0f * 3.1415f, glm::vec3(1.0f, 0.0f, 0.0f));
-    mMat *= glm::rotate(mMat, x / 360.0f * 2.0f * 3.1415f, glm::vec3(0.0f, 1.0f, 0.0f));
-    vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-(cameraX), -(cameraY), -cameraZ));
+    mMat = glm::translate(glm::mat4(1.0f), pyrLoc);
+    mMat = glm::rotate(mMat, toRadians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    mMat = glm::rotate(mMat, toRadians(20.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-cameraX, -cameraY, -cameraZ));
 
     mvMat = vMat * mMat;
     invTrMat = glm::transpose(glm::inverse(mvMat));
@@ -177,18 +213,47 @@ void display(GLFWwindow* window, double currentTime) {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
 
+    glEnable(GL_CULL_FACE);
+    glFrontFace(GL_CCW);
+    glDepthFunc(GL_LEQUAL);
+    glDrawArrays(GL_TRIANGLES, 0, myModel.getNumVertices());
+
 //    glActiveTexture(GL_TEXTURE0);
 //    glBindTexture(GL_TEXTURE_2D, brickTexture);
 
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-//    int vert_num = myTorus.getNumIndices();
-//    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
-//    glDrawElements(GL_TRIANGLES, vert_num, GL_UNSIGNED_INT, nullptr);
-//    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, 100000);
-//    glDrawArrays(GL_TRIANGLES, 0, 18);
-    glDrawArrays(GL_TRIANGLES, 0, myModel.getNumVertices());
+    mMat = glm::translate(glm::mat4(1.0f), torusLoc);
+    mMat = glm::rotate(mMat, toRadians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    mMat = glm::rotate(mMat, toRadians(0), glm::vec3(0.0f, 1.0f, 0.0f));
 
+    mvMat = vMat * mMat;
+    invTrMat = glm::transpose(glm::inverse(mvMat));
+
+
+    currentLightPos = glm::vec3(initialLightLoc.x, initialLightLoc.y, initialLightLoc.z);
+    installLights(vMat);
+
+
+    glUniformMatrix4fv(vLoc, 1, GL_FALSE, glm::value_ptr(mvMat));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(pMat));
+    glUniformMatrix4fv(nLoc, 1, GL_FALSE, glm::value_ptr(invTrMat));
+    glUniform1f(tfLoc, (float)currentTime);
+
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[5]);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(2);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[6]);
+    glEnable(GL_CULL_FACE);
+    glFrontFace(GL_CCW);
+    glDepthFunc(GL_LEQUAL);
+    glEnable(GL_DEPTH_TEST);
+    glDrawElements(GL_TRIANGLES, myTorus.getNumIndices(), GL_UNSIGNED_INT, nullptr);
 }
 
 

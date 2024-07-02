@@ -44,35 +44,11 @@ void main(void) {
     varyingLightDir = light.position - varyingVertPos;
     varyingNormal = (norm_matrix * vec4(normal, 1.0)).xyz;
 
-    mat4 s_matrix = buildScale(3, 3, 3);
 
-//    mat4 newM_matrix = localRotX * localRotY * localRotZ;
-//    mat4 mv_matrix = v_matrix * newM_matrix;
     tc = textCord;
-    gl_Position = proj_matrix *  mv_matrix * s_matrix * vec4(position, 1.0);
+    gl_Position = proj_matrix *  mv_matrix *  vec4(position, 1.0);
 }
 
-//void main(void) {
-//    float i = gl_InstanceID + tf;
-//
-//
-//    float a = sin(203.0 * i / 8000.0) * 400.0;
-//    float b = sin(301.0 * i / 4000.0) * 400.0;
-//    float c = sin(400.0 * i / 6000.0) * 400.0;
-//
-//    mat4 localRotX = buildRotateX(1000 * i);
-//    mat4 localRotY = buildRotateY(1000 * i);
-//    mat4 localRotZ = buildRotateZ(1000 * i);
-//    mat4 localTrans = buildTranslate(a, b, c);
-//
-//    mat4 newM_matrix = localTrans * localRotX * localRotY * localRotZ;
-//    mat4 mv_matrix = v_matrix * newM_matrix;
-//
-//
-//
-//    gl_Position = proj_matrix * mv_matrix * vec4(position, 1.0);
-//    varyingColor = vec4(position, 1.0) * 0.5 + vec4(0.5, 0.5, 0.5, 0.5);
-//}
 
 mat4 buildRotateX(float rad) {
     mat4 res = mat4(
