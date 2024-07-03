@@ -12,7 +12,7 @@
 
 #define numVAOs 1
 #define numVBOs 7
-GLuint renderingProgram1, renderingProgram2;
+GLuint renderingProgram1, renderingProgram2, renderingProgram3, currentProgram;
 GLuint vao[numVAOs];
 GLuint vbo[numVBOs];
 
@@ -22,7 +22,7 @@ float cubeLocX, cubeLocY, cubeLocZ;
 GLint vLoc, projLoc, tfLoc, nLoc, sLoc;
 int width, height;
 float aspect;
-glm::mat4 pMat, vMat, mMat, mvMat, invTrMat;
+glm::mat4 pMat, vMat, mMat, mvMat, sMat, invTrMat;
 
 GLint globalAmbLoc, ambLoc, diffLoc, specLoc, posLoc, mAmbLoc, mDiffLoc, mSpecLoc, mShiLoc;
 glm::vec3 currentLightPos, lightPosV;
@@ -188,6 +188,7 @@ void setup_vertices() {
 void init(GLFWwindow* window) {
     renderingProgram1 = createShaderProgram("../glsl/phong/vertShader1.glsl", "../glsl/phong/fragShader1.glsl");
     renderingProgram2 = createShaderProgram("../glsl/phong/vertShader2.glsl", "../glsl/phong/fragShader2.glsl");
+    renderingProgram3 = createShaderProgram("../glsl/phong/vertShader2.glsl", "../glsl/singleColor.glsl");
     cameraX = 0.0f; cameraY = 0.0f; cameraZ = 8.0f;
     cubeLocX = 0.0f; cubeLocY = -2.0f; cubeLocZ = 0.0f;
     brickTexture = loadTexture("../assets/Studio522Dolphin/Dolphin_HighPolyUV.png");
@@ -196,8 +197,8 @@ void init(GLFWwindow* window) {
 }
 
 void passOne() {
-    glUseProgram(renderingProgram1);
-    sLoc = glGetUniformLocation(renderingProgram1, "shadowMVP");
+    glUseProgram(currentProgram);
+    sLoc = glGetUniformLocation(currentProgram, "shadowMVP");
 
     mMat = glm::translate(glm::mat4(1.0f), pyrLoc);
     mMat = glm::rotate(mMat, toRadians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -236,24 +237,24 @@ void passOne() {
 }
 
 void passTwo() {
-    glUseProgram(renderingProgram2);
-    vLoc = glGetUniformLocation(renderingProgram2, "mv_matrix");
-    projLoc = glGetUniformLocation(renderingProgram2, "proj_matrix");
-    nLoc = glGetUniformLocation(renderingProgram2, "norm_matrix");
-    sLoc = glGetUniformLocation(renderingProgram2, "shadowMVP");
+    glUseProgram(currentProgram);
+    vLoc = glGetUniformLocation(currentProgram, "mv_matrix");
+    projLoc = glGetUniformLocation(currentProgram, "proj_matrix");
+    nLoc = glGetUniformLocation(currentProgram, "norm_matrix");
+    sLoc = glGetUniformLocation(currentProgram, "shadowMVP");
     pMat = glm::perspective(0.5f, aspect, 0.1f, 1000.0f);
 
     mMat = glm::translate(glm::mat4(1.0f), pyrLoc);
     mMat = glm::rotate(mMat, toRadians(10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     mMat = glm::rotate(mMat, toRadians(20.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-cameraX, -cameraY, -cameraZ));
-    mvMat = vMat * mMat;
+    mvMat = vMat *  mMat * sMat;
     invTrMat = glm::transpose(glm::inverse(mvMat));
 
     shadowMVP2 = b * lightPMatrix * lightVMatrix * mMat;
 
     currentLightPos = glm::vec3(initialLightLoc);
-    installLights(renderingProgram2,vMat);
+    installLights(currentProgram,vMat);
 
 
     glUniformMatrix4fv(vLoc, 1, GL_FALSE, glm::value_ptr(mvMat));
@@ -285,9 +286,9 @@ void passTwo() {
     vMat = glm::translate(glm::mat4(1.0f), glm::vec3(-cameraX, -cameraY, -cameraZ));
 
     currentLightPos = glm::vec3(initialLightLoc);
-    installLights(renderingProgram2,vMat);
+    installLights(currentProgram,vMat);
 
-    mvMat = vMat * mMat;
+    mvMat =  vMat *  mMat * sMat ;
     invTrMat = glm::transpose(glm::inverse(mvMat));
     shadowMVP2 = b * lightPMatrix * lightVMatrix * mMat;
 
@@ -314,9 +315,11 @@ void passTwo() {
 }
 
 void display(GLFWwindow* window, double currentTime) {
-    glClear(GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_STENCIL_TEST);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glClearColor(0.2, 0.5,0.3, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT);
 
     aspect = (float) width / (float) height;
 
@@ -333,6 +336,7 @@ void display(GLFWwindow* window, double currentTime) {
     glPolygonOffset(2.0f, 4.0f);
     glClear(GL_DEPTH_BUFFER_BIT);
 
+    currentProgram = renderingProgram1;
     passOne();
 
     glDisable(GL_POLYGON_OFFSET_FILL);
@@ -345,7 +349,21 @@ void display(GLFWwindow* window, double currentTime) {
     // this line will cause blinking, don't know why
 //    glDrawBuffer(GL_FRONT);
 
+    glStencilFunc(GL_ALWAYS, 1, 0xff);
+    glStencilMask(0xff);
+    sMat = glm::mat4(1.0f);
+    currentProgram = renderingProgram2;
     passTwo();
+
+
+    glStencilFunc(GL_NOTEQUAL, 1, 0xff);
+    glStencilMask(0x00);
+    glDisable(GL_DEPTH_TEST);
+    sMat = glm::scale(sMat, glm::vec3(1.04f, 1.04f, 1.04f));
+    currentProgram = renderingProgram3;
+    passTwo();
+    glStencilMask(0xff);
+    glEnable(GL_DEPTH_TEST);
 }
 
 
@@ -353,6 +371,7 @@ int main() {
     if (!glfwInit()) {
         exit(EXIT_FAILURE);
     }
+    glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     GLFWwindow* window = glfwCreateWindow(800, 600, "opengl-learn", NULL, NULL);
